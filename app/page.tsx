@@ -1,103 +1,220 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { Toaster } from 'react-hot-toast';
+import LocationSelector from './components/LocationSelector';
+import CafeSearch from './components/CafeSearch';
+import CafeList from './components/CafeList';
+import CafeDetail from './components/CafeDetail';
+import { PlusIcon } from '@heroicons/react/24/outline';
+import MapSearch from './components/MapSearch';
+
+interface Cafe {
+  id: string;
+  name: string;
+  address: string;
+  imageUrl: string;
+  crowdLevel: number;
+}
+
+interface Location {
+  id: string;
+  name: string;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
+  const [selectedCafe, setSelectedCafe] = useState<Cafe | null>(null);
+  const [cafes, setCafes] = useState<Cafe[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isAddingCafe, setIsAddingCafe] = useState(false);
+  const [newCafe, setNewCafe] = useState<Partial<Cafe>>({
+    name: '',
+    address: '',
+    imageUrl: '',
+    crowdLevel: 3,
+  });
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  // サンプルデータ（実際のAPIに置き換える）
+  const locations: Location[] = [
+    { id: '1', name: '渋谷区' },
+    { id: '2', name: '新宿区' },
+    { id: '3', name: '港区' },
+    { id: '4', name: '千代田区' },
+    { id: '5', name: '中央区' },
+  ];
+
+  const sampleCafes: Cafe[] = [
+    {
+      id: '1',
+      name: 'サンプルカフェ1',
+      address: '東京都渋谷区道玄坂1-1-1',
+      imageUrl: 'https://example.com/cafe1.jpg',
+      crowdLevel: 1,
+    },
+    {
+      id: '2',
+      name: 'サンプルカフェ2',
+      address: '東京都新宿区西新宿1-1-1',
+      imageUrl: 'https://example.com/cafe2.jpg',
+      crowdLevel: 2,
+    },
+  ];
+
+  useEffect(() => {
+    // 実際のAPIからデータを取得する処理をここに実装
+    setCafes(sampleCafes);
+  }, [selectedLocation]);
+
+  const handleLocationSelect = (location: Location) => {
+    setSelectedLocation(location);
+    setSelectedCafe(null);
+    setSearchQuery('');
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    // 検索処理
+    const filteredCafes = sampleCafes.filter((cafe) =>
+      cafe.name.toLowerCase().includes(query.toLowerCase())
+    );
+    setCafes(filteredCafes);
+  };
+
+  const handleCafeSelect = (cafe: Cafe) => {
+    setSelectedCafe(cafe);
+    setIsAddingCafe(false);
+  };
+
+  const handleCrowdLevelUpdate = (cafeId: string, newLevel: number) => {
+    setCafes((prevCafes) =>
+      prevCafes.map((cafe) =>
+        cafe.id === cafeId ? { ...cafe, crowdLevel: newLevel } : cafe
+      )
+    );
+    setSelectedCafe((prev) =>
+      prev && prev.id === cafeId
+        ? { ...prev, crowdLevel: newLevel }
+        : prev
+    );
+  };
+
+  const handleAddCafe = () => {
+    setIsAddingCafe(true);
+    setSelectedCafe(null);
+  };
+
+  const handleNewCafeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewCafe((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handlePlaceSelect = (place: {
+    name: string;
+    address: string;
+    lat: number;
+    lng: number;
+  }) => {
+    console.log('Place selected:', place);
+    try {
+      const newCafe: Cafe = {
+        id: Date.now().toString(),
+        name: place.name,
+        address: place.address,
+        imageUrl: place.lat && place.lng 
+          ? `https://maps.googleapis.com/maps/api/streetview?size=400x300&location=${place.lat},${place.lng}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
+          : 'https://via.placeholder.com/400x300?text=No+Image',
+        crowdLevel: 3,
+      };
+
+      setCafes((prev) => [...prev, newCafe]);
+      setNewCafe({
+        name: '',
+        address: '',
+        imageUrl: '',
+        crowdLevel: 3,
+      });
+      setIsAddingCafe(false);
+    } catch (error) {
+      console.error('Error creating cafe:', error);
+      // エラーが発生した場合はデフォルト画像を使用
+      const newCafe: Cafe = {
+        id: Date.now().toString(),
+        name: place.name,
+        address: place.address,
+        imageUrl: 'https://via.placeholder.com/400x300?text=No+Image',
+        crowdLevel: 3,
+      };
+      setCafes((prev) => [...prev, newCafe]);
+      setNewCafe({
+        name: '',
+        address: '',
+        imageUrl: '',
+        crowdLevel: 3,
+      });
+      setIsAddingCafe(false);
+    }
+  };
+
+  return (
+    <main className="bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-900">
+          Cafe Crowd Checker
+        </h1>
+        <div className="max-w-2xl mx-auto space-y-8">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900">Select Location</h2>
+            <LocationSelector
+              locations={locations}
+              onLocationSelect={handleLocationSelect}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </div>
+
+          {selectedLocation && (
+            <>
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+                  <h2 className="text-xl font-semibold text-gray-900">Search Cafes</h2>
+                  <button
+                    onClick={handleAddCafe}
+                    className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-1 min-w-0"
+                  >
+                    <PlusIcon className="w-5 h-5" />
+                    <span>Add Cafe</span>
+                  </button>
+                </div>
+                <CafeSearch onSearch={handleSearch} />
+              </div>
+
+              {isAddingCafe ? (
+                <div className="bg-white rounded-lg shadow-md p-6">
+                  <h2 className="text-xl font-semibold mb-4 text-gray-900">Add Cafe</h2>
+                  <MapSearch onPlaceSelect={handlePlaceSelect} />
+                </div>
+              ) : (
+                <>
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-900">Cafe List</h2>
+                    <CafeList cafes={cafes} onCafeSelect={handleCafeSelect} />
+                  </div>
+
+                  {selectedCafe && (
+                    <div className="bg-white rounded-lg shadow-md p-6">
+                      <h2 className="text-xl font-semibold mb-4 text-gray-900">Cafe Detail</h2>
+                      <CafeDetail
+                        cafe={selectedCafe}
+                        onUpdateCrowdLevel={handleCrowdLevelUpdate}
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+      </div>
+      <Toaster />
+    </main>
   );
 }
